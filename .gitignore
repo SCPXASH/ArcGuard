@@ -1,0 +1,12 @@
+# PlatformIO build output and downloaded libraries
+firmware/.pio/
+.pio/
+# Wi-Fi credentials (copy secrets.example.h -> secrets.h)
+firmware/ArcGuard/secrets.h
+# Runtime database
+backend/data/
+# Python
+__pycache__/
+*.pyc
+# graphify output
+graphify-out/

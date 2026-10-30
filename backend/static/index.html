@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arc Guard — Room Monitor</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div id="simBanner" class="sim-banner" hidden>SIMULATED DATA — readings come from a simulator (simulator.py or the 3D sim), not from the physical sensors</div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 40 24" width="34" height="20" aria-hidden="true"><path d="M2 22 A18 18 0 0 1 38 22" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M20 22 L31 9" stroke="currentColor" stroke-width="2.5"/><circle cx="20" cy="22" r="2.5" fill="currentColor"/></svg>
+      <div><b>ARC GUARD</b><small>Ultrasonic room monitoring</small></div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="dashboard" class="active">Dashboard</button>
+      <button data-tab="analytics">Analytics</button>
+      <button data-tab="events">Events <span id="newBadge" class="badge" hidden>0</span></button>
+      <button data-tab="settings">Settings</button>
+    </nav>
+    <div class="top-status">
+      <span id="pillSystem" class="pill">—</span>
+      <a class="pill dim" href="/sim?mode=live" target="_blank" title="3D view of the real readings: place the sensors to match the room">Live room ↗</a>
+      <a class="pill dim" href="/sim" target="_blank" title="Open the 3D room simulator">3D sim ↗</a>
+      <span id="pillLink" class="pill dim" title="Dashboard ↔ backend connection">● backend</span>
+      <span id="clock" class="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ======================= DASHBOARD ======================= -->
+    <section id="tab-dashboard" class="tab active">
+      <div id="notices"></div>
+      <div class="kpis">
+        <div class="kpi"><label>System</label><b id="kSystem">—</b><small id="kSystemSub">&nbsp;</small></div>
+        <div class="kpi"><label>ESP32</label><b id="kDevice">—</b><small id="kDeviceSub">&nbsp;</small></div>
+        <div class="kpi"><label>Wi-Fi</label><b id="kWifi">—</b><small id="kWifiSub">&nbsp;</small></div>
+        <div class="kpi"><label>Active sensors</label><b id="kActive">—</b><small>of 3</small></div>
+        <div class="kpi"><label>Monitoring</label><b id="kMonitor">—</b><small id="kMonitorSub">&nbsp;</small></div>
+        <div class="kpi accent-move"><label>Movement events</label><b id="kMove">0</b><small>total</small></div>
+        <div class="kpi accent-anom"><label>Anomaly events</label><b id="kAnom">0</b><small>total</small></div>
+        <div class="kpi"><label>Last activity</label><b id="kLastAct">—</b><small id="kLastActSub">&nbsp;</small></div>
+        <div class="kpi"><label>Last sensor update</label><b id="kLastUpd">—</b><small id="kLastUpdSub">&nbsp;</small></div>
+      </div>
+
+      <div class="grid-main">
+        <div class="card radar-card">
+          <div class="card-head">
+            <h2>Room Map — top view <small id="mapRoom">front: Sensor 3 scan (0–180°) · fixed Sensors 1 &amp; 2 at their placement</small></h2>
+            <div class="seg" id="radarRange">
+              <button data-r="100">1 m</button><button data-r="200">2 m</button><button data-r="300" class="active">3 m</button><button data-r="400">4 m</button>
+            </div>
+          </div>
+          <canvas id="radar"></canvas>
+          <div class="legend">
+            <span><i class="sw base"></i>Baseline (calibrated room)</span>
+            <span><i class="sw live"></i>Latest sweep</span>
+            <span><i class="sw chg"></i>Changed vs baseline</span>
+            <span><i class="sw oor"></i>No echo / out of range</span>
+            <span><i class="sw beam"></i>Servo angle</span>
+            <span><i class="sw s1"></i>Sensor 1 beam</span>
+            <span><i class="sw s2"></i>Sensor 2 beam</span>
+            <span><i class="sw band"></i>Fixed-sensor baseline ± threshold</span>
+          </div>
+          <p class="note">Each point is one ultrasonic measurement (angle, distance). Beams are ~15° wide, so this is a coarse range map — not an image. Fixed-sensor directions are set under Settings → Sensor placement.</p>
+        </div>
+
+        <div class="sensor-col">
+          <div class="card sensor" id="panel1"><div class="info"></div><canvas class="gauge" id="gauge1"></canvas></div>
+          <div class="card sensor" id="panel2"><div class="info"></div><canvas class="gauge" id="gauge2"></canvas></div>
+          <div class="card sensor" id="panel3"></div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card"><div class="card-head"><h2>Sensor 1 <small>distance vs time</small></h2></div><div class="chart-box"><canvas id="cLive1"></canvas></div></div>
+        <div class="card"><div class="card-head"><h2>Sensor 2 <small>distance vs time</small></h2></div><div class="chart-box"><canvas id="cLive2"></canvas></div></div>
+        <div class="card"><div class="card-head"><h2>Sensor 3 <small>distance vs time (all angles)</small></h2></div><div class="chart-box"><canvas id="cLive3"></canvas></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Recent events</h2><button class="btn ghost" data-goto="events">Open event log →</button></div>
+        <div class="table-wrap"><table class="events compact"><thead><tr><th>Time</th><th>Sensor</th><th>Category</th><th>Type</th><th>Distance</th><th>Baseline</th><th>Δ</th><th>Angle</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ======================= ANALYTICS ======================= -->
+    <section id="tab-analytics" class="tab">
+      <div class="toolbar">
+        <span>Window:</span>
+        <div class="seg" id="anWindow"><button data-m="2" class="active">2 min</button><button data-m="10">10 min</button><button data-m="60">1 h</button><button data-m="1440">24 h</button></div>
+        <span class="muted" id="anInfo"></span>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-head"><h2>Sensor 1 — distance vs time</h2></div><div class="chart-box tall"><canvas id="cA1"></canvas></div></div>
+        <div class="card"><div class="card-head"><h2>Sensor 2 — distance vs time</h2></div><div class="chart-box tall"><canvas id="cA2"></canvas></div></div>
+        <div class="card"><div class="card-head"><h2>Sensor 3 — distance vs time</h2></div><div class="chart-box tall"><canvas id="cA3"></canvas></div></div>
+        <div class="card"><div class="card-head"><h2>Deviation from baseline vs time</h2></div><div class="chart-box tall"><canvas id="cDev"></canvas></div></div>
+        <div class="card"><div class="card-head"><h2>Movement events <small>per minute</small></h2></div><div class="chart-box tall"><canvas id="cMoveHist"></canvas></div></div>
+        <div class="card"><div class="card-head"><h2>Anomaly events <small>per minute</small></h2></div><div class="chart-box tall"><canvas id="cAnomHist"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-head"><h2>Sensor 3 — distance vs angle <small>latest sweep vs baseline</small></h2></div><div class="chart-box tall"><canvas id="cAngle"></canvas></div></div>
+    </section>
+
+    <!-- ======================= EVENTS ======================= -->
+    <section id="tab-events" class="tab">
+      <div class="card">
+        <form class="filters" id="evFilters">
+          <label>Sensor<select name="sensor"><option value="">All</option><option value="1">Sensor 1</option><option value="2">Sensor 2</option><option value="3">Sensor 3</option></select></label>
+          <label>Category<select name="category"><option value="">All</option><option>MOVEMENT</option><option>ANOMALY</option></select></label>
+          <label>Type<select name="kind"><option value="">All</option><option>MOTION</option><option>TRANSIENT</option><option>SHIFT</option><option>RADIAL</option><option>OBJECT_APPEARED</option><option>OBJECT_DISAPPEARED</option><option>SUDDEN_CHANGE</option><option>PATTERN</option><option>SENSOR_FAULT</option></select></label>
+          <label>Status<select name="status"><option value="">All</option><option value="NEW">New</option><option value="ACKNOWLEDGED">Acknowledged</option></select></label>
+          <label>Source<select name="source"><option value="">All</option><option value="real">Real hardware</option><option value="simulated">Simulated</option></select></label>
+          <label>From<input type="date" name="date_from"></label>
+          <label>To<input type="date" name="date_to"></label>
+          <div class="filter-actions">
+            <button type="button" class="btn ghost" id="evReset">Reset</button>
+            <a class="btn ghost" id="evCsv" href="/api/events.csv">Export CSV</a>
+          </div>
+        </form>
+        <div class="table-wrap">
+          <table class="events">
+            <thead><tr><th>ID</th><th>Date</th><th>Time</th><th>Sensor</th><th>Category</th><th>Type</th><th>Distance</th><th>Baseline</th><th>Δ</th><th>Angle</th><th>Status</th><th></th></tr></thead>
+            <tbody id="evBody"></tbody>
+          </table>
+        </div>
+        <div class="pager"><button class="btn ghost" id="evPrev">← Newer</button><span id="evPage" class="muted"></span><button class="btn ghost" id="evNext">Older →</button></div>
+      </div>
+    </section>
+
+    <!-- ======================= SETTINGS ======================= -->
+    <section id="tab-settings" class="tab">
+      <div class="card settings-head">
+        <div>
+          <h2>Device settings</h2>
+          <p class="muted">Changes are sent to the ESP32, applied immediately and saved in its flash. The badge shows whether the device has confirmed them.</p>
+        </div>
+        <div class="apply-state"><span id="setState" class="pill">—</span><small id="setStateSub" class="muted"></small></div>
+      </div>
+
+      <div class="card actions">
+        <h3>Actions</h3>
+        <div class="action-row">
+          <button class="btn primary" data-cmd="calibrate">Recalibrate baseline</button>
+          <button class="btn" data-cmd="scan_start">Start scanning</button>
+          <button class="btn" data-cmd="scan_stop">Stop scanning</button>
+          <button class="btn" data-cmd="buzzer_test">Test buzzer</button>
+          <button class="btn ghost" data-cmd="silence">Silence buzzer</button>
+        </div>
+        <p class="muted">Recalibrate with the monitored area empty. It takes ~2 s for the fixed sensors and 5 sweeps (~20 s) for the scanning sensor.</p>
+        <div id="cmdLog" class="cmd-log"></div>
+      </div>
+
+      <form id="layoutForm" class="card layout-card">
+        <h3>Sensor placement (room map only — not sent to the ESP32)</h3>
+        <div class="room-row">
+          <label>Saved room<select id="roomPick"></select></label>
+          <button type="button" class="btn" id="roomActivate">Use this room</button>
+          <a class="btn primary" href="/sim?mode=live" target="_blank">Place sensors in the live 3D view ↗</a>
+          <span class="muted" id="roomInfo"></span>
+        </div>
+        <p class="muted">Easiest: open the live 3D view, drag Sensors 1 and 2 to where they really are, press <b>Auto-aim</b>, and save the room — these fields fill in by themselves. A saved room remembers its sensor placement for next time.</p>
+        <p class="muted">Where each fixed sensor is and where it points, relative to the device: position in cm to the right (X) and to the front (Y); direction 0° = right, 90° = front, 180° = left, 270° = rear. Dragging a sensor in the 3D simulator updates these values, and the simulator follows changes made here.</p>
+        <div class="layout-row">
+          <label class="num">Sensor 1 zone name<input type="text" name="s1_name" maxlength="24"></label>
+          <label class="num">Sensor 1 X — right (cm)<input type="number" name="s1_x" min="-1000" max="1000" step="5"></label>
+          <label class="num">Sensor 1 Y — front (cm)<input type="number" name="s1_y" min="-1000" max="1000" step="5"></label>
+          <label class="num">Sensor 1 direction (°)<input type="number" name="s1_angle" min="0" max="359" step="5"></label>
+          <label class="num">Sensor 2 zone name<input type="text" name="s2_name" maxlength="24"></label>
+          <label class="num">Sensor 2 X — right (cm)<input type="number" name="s2_x" min="-1000" max="1000" step="5"></label>
+          <label class="num">Sensor 2 Y — front (cm)<input type="number" name="s2_y" min="-1000" max="1000" step="5"></label>
+          <label class="num">Sensor 2 direction (°)<input type="number" name="s2_angle" min="0" max="359" step="5"></label>
+          <button type="submit" class="btn primary">Save placement</button>
+        </div>
+      </form>
+
+      <form id="setForm" class="settings-grid">
+        <div class="card">
+          <h3>Sensors</h3>
+          <label class="sw-row"><input type="checkbox" name="s1_enabled"><span>Sensor 1 (fixed) enabled</span></label>
+          <label class="sw-row"><input type="checkbox" name="s2_enabled"><span>Sensor 2 (fixed) enabled</span></label>
+          <label class="sw-row"><input type="checkbox" name="s3_enabled"><span>Sensor 3 (scanning) enabled</span></label>
+          <label class="sw-row"><input type="checkbox" name="s3_uart"><span>Sensor 3 in UART mode (US-100 jumper fitted — device restarts)</span></label>
+          <label class="num">Air temperature (°C)<input type="number" name="temp_c" step="0.5"><small>Speed-of-sound correction</small></label>
+        </div>
+
+        <div class="card">
+          <h3>Detection sensitivity</h3>
+          <div class="seg wide" id="preset"><button type="button" data-p="low">Low</button><button type="button" data-p="medium">Medium</button><button type="button" data-p="high">High</button></div>
+          <small class="muted">Presets set the distance threshold and noise multiplier below.</small>
+          <label class="num">Distance threshold τ_abs (cm)<input type="number" name="tau_abs_cm" step="1"><small>Minimum change counted as a deviation</small></label>
+          <label class="num">Noise multiplier k<input type="number" name="k_sigma" step="0.5"><small>Threshold = max(τ_abs, k × measured noise)</small></label>
+          <label class="num">Confirmation readings M<input type="number" name="confirm_count" step="1"><small>Consecutive readings beyond threshold</small></label>
+          <label class="num">Minimum duration (ms)<input type="number" name="t_min_ms" step="50"></label>
+        </div>
+
+        <div class="card">
+          <h3>Event rules</h3>
+          <label class="num">Movement rate (cm/s)<input type="number" name="rate_min_cms" step="5"><small>Faster changes are reported as movement</small></label>
+          <label class="num">Dwell time (s)<input type="number" name="dwell_s" step="1"><small>Before OBJECT_APPEARED / DISAPPEARED</small></label>
+          <label class="num">Sudden jump (cm)<input type="number" name="jump_cm" step="5"></label>
+          <label class="num">Pattern angles K<input type="number" name="pattern_k" step="1"><small>New changes in one sweep for PATTERN</small></label>
+          <label class="num">Fault after N no-responses<input type="number" name="fault_count" step="1"></label>
+          <label class="num">Cooldown (s)<input type="number" name="cooldown_s" step="1"></label>
+        </div>
+
+        <div class="card">
+          <h3>Servo scanning</h3>
+          <label class="sw-row"><input type="checkbox" name="scanning"><span>Scanning on</span></label>
+          <label class="num">Range start (°)<input type="number" name="scan_min" step="5"></label>
+          <label class="num">Range end (°)<input type="number" name="scan_max" step="5"></label>
+          <label class="num">Resolution — step (°)<input type="number" name="scan_step" step="1"><small>Changing range or step recalibrates the scan baseline</small></label>
+          <label class="num">Speed — settle time per step (ms)<input type="number" name="settle_ms" step="10"><small>Lower = faster sweep, higher = steadier readings</small></label>
+          <label class="num">Confirm sweeps<input type="number" name="scan_confirm_sweeps" step="1"></label>
+          <label class="num">Shift window (°)<input type="number" name="shift_window_deg" step="5"></label>
+          <p class="muted" id="sweepEstimate"></p>
+        </div>
+
+        <div class="card">
+          <h3>Buzzer</h3>
+          <label class="sw-row"><input type="checkbox" name="buzzer_enabled"><span>Buzzer enabled</span></label>
+          <label class="sw-row"><input type="checkbox" name="buzz_on_movement"><span>Beep on movement</span></label>
+          <label class="sw-row"><input type="checkbox" name="buzz_on_anomaly"><span>Beep on anomaly</span></label>
+          <label class="sw-row"><input type="checkbox" name="buzzer_passive"><span>Passive buzzer (needs a tone)</span></label>
+        </div>
+
+        <div class="card save-card">
+          <button type="submit" class="btn primary big" id="saveBtn">Save &amp; send to ESP32</button>
+          <button type="button" class="btn ghost" id="revertBtn">Discard changes</button>
+          <p class="muted" id="saveMsg"></p>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts"></div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

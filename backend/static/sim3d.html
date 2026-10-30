@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arc Guard — 3D Room</title>
+  <style>
+    :root { --panel: rgba(13, 20, 30, .93); --line: #24364b; --text: #e6edf5; --muted: #8898ad; --accent: #3fb6ff; --ok: #34d399; --warn: #fbbf24; --bad: #f87171; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1017; color: var(--text); font: 13px "Segoe UI", system-ui, Arial, sans-serif; }
+    #view { position: fixed; inset: 0; }
+    .banner { position: fixed; top: 0; left: 0; right: 0; z-index: 5; text-align: center; padding: 5px 10px; font-weight: 700; letter-spacing: .03em; color: #fff;
+      background: repeating-linear-gradient(45deg, #7c2d12, #7c2d12 14px, #9a3412 14px, #9a3412 28px); }
+    .banner.live { background: #0f3a5a; border-bottom: 1px solid #1e6aa0; }
+    .panel { position: fixed; z-index: 4; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; backdrop-filter: blur(4px); }
+    #left { top: 40px; left: 12px; width: 315px; max-height: calc(100% - 52px); overflow-y: auto; }
+    #right { top: 40px; right: 12px; width: 310px; max-height: calc(100% - 52px); overflow-y: auto; }
+    #help { bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); padding: 8px 14px; max-width: calc(100% - 670px); min-width: 300px; text-align: center; }
+    h1 { font-size: 15px; margin: 0 0 2px; letter-spacing: .1em; }
+    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 14px 0 6px; }
+    .sub { color: var(--muted); font-size: 12px; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; gap: 8px; }
+    .row b { font-variant-numeric: tabular-nums; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #172231; border: 1px solid var(--line); }
+    .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+    .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .btns.three { grid-template-columns: 1fr 1fr 1fr; }
+    .wide { grid-column: 1 / -1; }
+    button, select { background: #172231; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; font: inherit; font-weight: 600; cursor: pointer; }
+    select { font-weight: 400; width: 100%; }
+    button:hover { border-color: var(--accent); }
+    button.on { background: #12324d; border-color: var(--accent); }
+    button.primary { background: #1565c0; border-color: #1e88e5; }
+    button.danger.on { background: #3b1414; border-color: var(--bad); color: var(--bad); }
+    .palette button { font-weight: 500; font-size: 12px; padding: 6px 4px; }
+    label.chk { display: flex; gap: 8px; align-items: center; padding: 3px 0; cursor: pointer; }
+    label.chk input { accent-color: var(--accent); }
+    .field { display: grid; grid-template-columns: 74px 1fr 58px; gap: 8px; align-items: center; padding: 3px 0; }
+    .field span { color: var(--muted); font-size: 12px; }
+    .field input[type=range] { width: 100%; accent-color: var(--accent); }
+    .field input[type=number], .room input { width: 100%; background: #0b1017; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 5px; font: inherit; }
+    .room { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+    .room label { font-size: 11px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+    .notice { background: #2a220c; border: 1px solid #6b5413; color: var(--warn); border-radius: 8px; padding: 8px 10px; margin-top: 10px; font-size: 12px; }
+    .check { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+    .check.good { border-color: #1f5f4a; background: #0f2a22; }
+    .check.bad { border-color: #6b2525; background: #2a1111; }
+    .check .head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 4px; }
+    .check .nums { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); }
+    .feed { list-style: none; margin: 0; padding: 0; }
+    .feed li { padding: 6px 0; border-bottom: 1px solid #1a2636; font-size: 12px; }
+    .feed .t { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+    .cat { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 5px; margin-right: 4px; }
+    .MOVEMENT { background: #12284a; color: #60a5fa; } .ANOMALY { background: #3a2210; color: #fb923c; }
+    a { color: var(--accent); }
+    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    kbd { background: #172231; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
+    body.live .sim-only, body:not(.live) .live-only { display: none !important; }
+    @media (max-width: 900px) { #right { display: none; } #help { display: none; } }
+  </style>
+  <script type="importmap">{ "imports": { "three": "/static/vendor/three/three.module.js" } }</script>
+</head>
+<body>
+  <div class="banner" id="banner">3D SIMULATION — virtual room and virtual sensors. Everything sent to the dashboard is stored and shown as SIMULATED.</div>
+  <div id="view"></div>
+
+  <div id="left" class="panel">
+    <h1 id="title">ARC GUARD · 3D SIM</h1>
+    <div class="sub sim-only">Acts as the ESP32: same protocol, same detection rules as the firmware.</div>
+    <div class="sub live-only">Live room view: shows the readings of the connected device. Arrange the model to match the real room — it never sends data as a device.</div>
+    <div class="sub" style="margin-top:4px">Mode: <a class="sim-only" href="/sim?mode=live">switch to live room view</a><a class="live-only" href="/sim">switch to simulator</a></div>
+
+    <h2>Device</h2>
+    <div class="row"><span>Link</span><span id="link" class="pill">—</span></div>
+    <div class="row"><span>Device state</span><b id="devState">—</b></div>
+    <div class="row"><span>Servo angle</span><b id="angle">—</b></div>
+    <div class="row"><span><i class="sw" style="background:#fbbf24"></i>Sensor 1</span><b id="d1">—</b></div>
+    <div class="row"><span><i class="sw" style="background:#60a5fa"></i>Sensor 2</span><b id="d2">—</b></div>
+    <div class="row"><span><i class="sw" style="background:#34d399"></i>Sensor 3 (scan)</span><b id="d3">—</b></div>
+    <div class="row sim-only"><span>Buzzer</span><b id="buzz" class="muted">silent</b></div>
+
+    <h2>Room</h2>
+    <div class="row"><span>Current room</span><b id="roomName" class="muted">unsaved</b></div>
+    <div class="btns">
+      <select id="rooms" class="wide"></select>
+      <button id="loadRoom">Load room</button>
+      <button id="saveRoom" class="primary">Save room</button>
+      <button id="saveRoomAs">Save as…</button>
+      <button id="delRoom">Delete room</button>
+      <select id="preset"></select>
+      <button id="loadPreset">Load preset</button>
+      <button id="exportEnv">Export file</button>
+      <button id="importEnv">Import file</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <div class="sub" style="margin-top:4px">Saved rooms live on the backend: the dashboard and every browser see the same list. Loading a room moves Sensors 1 and 2 on the dashboard map too.</div>
+
+    <h2>Room size — distance from the device to each wall (cm)</h2>
+    <div class="room">
+      <label>Left<input type="number" id="roomL" min="50" max="1000" step="10"></label>
+      <label>Right<input type="number" id="roomRt" min="50" max="1000" step="10"></label>
+      <label>Front<input type="number" id="roomF" min="50" max="1200" step="10"></label>
+      <label>Rear<input type="number" id="roomR" min="30" max="800" step="10"></label>
+    </div>
+    <button id="fitRoom" class="live-only" style="width:100%;margin-top:6px">Fit left/right/front walls to the real scan</button>
+
+    <h2>Add item</h2>
+    <div class="btns three palette" id="palette"></div>
+
+    <div class="sim-only">
+      <h2>Scenario</h2>
+      <div class="btns">
+        <button id="walk">Person: auto-walk</button>
+        <button id="demo">▶ Auto demo (60 s)</button>
+      </div>
+    </div>
+
+    <h2>Device controls</h2>
+    <div class="btns">
+      <button id="recal">Recalibrate</button>
+      <button id="wifi" class="danger sim-only">Wi-Fi: on</button>
+      <button id="u1" class="danger sim-only">Unplug S1</button>
+      <button id="u2" class="danger sim-only">Unplug S2</button>
+      <button id="u3" class="danger sim-only">Unplug S3</button>
+      <button id="sound" class="sim-only">Sound: off</button>
+    </div>
+    <div class="sim-only">
+      <label class="chk"><input type="checkbox" id="autoRecal" checked> Auto-recalibrate after I rearrange the room (turn off to test object detection)</label>
+      <label class="chk"><input type="checkbox" id="soft" checked> Soft targets sometimes absorb echoes (people, plants)</label>
+    </div>
+    <label class="chk"><input type="checkbox" id="showBeams" checked> Show beams and hit points</label>
+    <label class="chk live-only"><input type="checkbox" id="showOutline" checked> Show the real scan outline (surfaces Sensor 3 sees)</label>
+    <div id="dirty" class="notice" hidden></div>
+    <p class="sim-only sub">Settings and commands from the dashboard (thresholds, scan range, start/stop, test buzzer) apply here exactly as on the ESP32.</p>
+    <p><a href="/" target="_blank">Open the dashboard ↗</a></p>
+  </div>
+
+  <div id="right" class="panel">
+    <div class="live-only">
+      <h2 style="margin-top:0">Placement check</h2>
+      <div class="sub" style="margin-bottom:8px">Compares what each fixed sensor <i>should</i> see in this model with what the real sensor reads (its calibrated baseline). Green = the placement matches reality.</div>
+      <div id="checks"></div>
+      <button id="aimBoth" class="primary" style="width:100%">Auto-aim both sensors</button>
+      <div class="sub" style="margin-top:6px">Auto-aim turns each modelled sensor to the direction whose predicted distance best matches the real one (searching ±90° around where you put it). Place each sensor roughly first.</div>
+    </div>
+    <h2>Selected</h2>
+    <div id="inspector" class="sub">Click an item or a sensor to edit it.</div>
+    <h2>Events</h2>
+    <ul id="feed" class="feed"><li class="muted">Waiting…</li></ul>
+    <h2>Legend</h2>
+    <div class="sub">
+      <div><i class="sw" style="background:#fbbf24"></i>S1 beam · <i class="sw" style="background:#60a5fa"></i>S2 beam · <i class="sw" style="background:#34d399"></i>S3 beam</div>
+      <div style="margin-top:4px"><i class="sw" style="background:#34d399;border-radius:50%"></i>scan point matches baseline</div>
+      <div><i class="sw" style="background:#f87171;border-radius:50%"></i>scan point changed vs baseline</div>
+      <div class="live-only"><i class="sw" style="background:#22d3ee;opacity:.6"></i>real scan outline</div>
+      <div style="margin-top:4px">Beams are ~15° cones at each sensor's mounting height — items lower than the beam are not seen, as with real sensors.</div>
+    </div>
+  </div>
+
+  <div id="help" class="panel">
+    Click to select · drag to move (items and Sensors 1/2) · <kbd>Q</kbd>/<kbd>E</kbd> rotate · <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicate · <kbd>Del</kbd> delete ·
+    <span class="sim-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk the selected (or first) person ·</span> orbit: drag empty space · zoom: wheel. Keep this tab visible.
+  </div>
+
+  <script type="module" src="/static/sim3d.js"></script>
+</body>
+</html>
