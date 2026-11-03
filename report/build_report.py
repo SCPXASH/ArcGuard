@@ -22,7 +22,8 @@ OUT_DIR = ROOT / "report"
 DOCX = OUT_DIR / "ArcGuard_Project_Report.docx"
 PDF = OUT_DIR / "ArcGuard_Project_Report.pdf"
 FIG = ROOT / "docs" / "diagrams" / "png"
-LOGO = OUT_DIR / "assets" / "logo_p0_0_IM29.jpg"
+ASSETS = OUT_DIR / "assets"
+LOGO = ASSETS / "logo_p0_0_IM29.jpg"
 
 TITLE = "Arc Guard: A Servo-Based Directional Intrusion Detection and Radar Visualization System"
 STUDENTS = [("PRATHAM PAWAR", "VU4F2324148"), ("PREETI GOUD", "VU4F2324145"),
@@ -149,13 +150,13 @@ class R:
     def h3(self, text):
         self.p(text, 12, True, align="left", space_after=4, keep=True)
 
-    def figure(self, key, file, caption, width_cm=15.5):
+    def figure(self, key, file, caption, width_cm=15.5, folder=FIG):
         n = f"{self.chapter}.{sum(1 for k in self.fig_no if k.startswith(f'{self.chapter}.')) + 1}"
         self.fig_no[n] = key
         para = self.d.add_paragraph()
         para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         para.paragraph_format.keep_with_next = True
-        para.add_run().add_picture(str(FIG / file), width=Cm(width_cm))
+        para.add_run().add_picture(str(folder / file), width=Cm(width_cm))
         self.p(f"Fig {n}. {caption}", 11, False, True, align="center", space_after=12, line=1.15)
         return n
 
@@ -291,9 +292,10 @@ def front_matter(r: R):
         "backend that stores history in SQLite and pushes live updates to a web dashboard. The dashboard "
         "shows system health, three sensor panels, a radar-style semicircular map built from real scan data, "
         "live charts, a filterable event log, and settings that are applied on the device and acknowledged. "
-        "The system reports possible movement and anomalies only; it does not identify people.")
+        "An Android app shows the same dashboard on a phone and vibrates and raises a notification when an event "
+        "is reported. The system reports possible movement and anomalies only; it does not identify people.")
     r.p("**Keywords:** ESP32, ultrasonic ranging, servo scanning, baseline modelling, anomaly detection, "
-        "WebSocket, FastAPI, radar visualization, privacy-preserving monitoring.")
+        "WebSocket, FastAPI, radar visualization, Android, privacy-preserving monitoring.")
 
     # acknowledgement
     r.plain_title("ACKNOWLEDGEMENT")
@@ -336,8 +338,9 @@ INDEX_ROWS = [  # (chapter column, section text, search key in PDF text)
     ("5.1", "Firmware Implementation", "5.1 Firmware Implementation"),
     ("5.2", "Backend and Database", "5.2 Backend and Database"),
     ("5.3", "Web Dashboard", "5.3 Web Dashboard"),
-    ("5.4", "Test Plan and Results", "5.4 Test Plan"),
-    ("5.5", "Discussion", "5.5 Discussion"),
+    ("5.4", "Android Mobile App", "5.4 Android Mobile App"),
+    ("5.5", "Test Plan and Results", "5.5 Test Plan"),
+    ("5.6", "Discussion", "5.6 Discussion"),
     ("Chapter 6", "Conclusion and Future Scope", "CHAPTER 6"),
     ("", "Sustainable Development Goals (SDGs)", "Sustainable Development Goals (SDGs)"),
     ("", "References", "REFERENCES"),
@@ -371,7 +374,8 @@ def list_of_figures(r: R):
     figs = [("3.1", "Hardware block diagram"), ("3.2", "System architecture"),
             ("3.3", "Sequential measurement schedule"), ("3.4", "Detection logic state machine"),
             ("3.5", "Communication flow"), ("4.1", "Breadboard wiring diagram"),
-            ("4.2", "Demo placement (top view)"), ("5.1", "Firmware flow")]
+            ("4.2", "Demo placement (top view)"), ("5.1", "Firmware flow"),
+            ("5.2", "Android app: connect screen and dashboard")]
     r.table(["Figure", "Title"], figs, widths=(3, 12.5), size=11)
     tabs = [("3.1", "Hardware components"), ("3.2", "Software stack"), ("3.3", "Default detection parameters"),
             ("4.1", "GPIO pin mapping"), ("4.2", "Power connections"), ("5.1", "Backend API endpoints"),
@@ -412,7 +416,7 @@ def chapter1(r: R):
         "**Persistent confirmation:** report a change only when it persists for several valid readings, to reduce false alarms.",
         "**Two event categories:** keep movement events and anomaly events separate.",
         "**Local alert:** sound the MH-FMD buzzer on confirmed events (configurable).",
-        "**Wireless real-time dashboard:** stream data over Wi-Fi to a backend and a web dashboard usable on a laptop or phone browser.",
+        "**Wireless real-time dashboard:** stream data over Wi-Fi to a backend and a web dashboard usable on a laptop or phone browser, and in an Android app that alerts the user.",
         "**Privacy preservation:** achieve all of the above without any camera.",
     ])
     r.h2("1.5 Scope and Limitations")
@@ -459,7 +463,8 @@ def chapter3(r: R):
         "sensors, the servo and the buzzer. The **edge layer** is the ESP32 firmware, which schedules "
         "measurements, filters them, maintains baselines, detects events and drives the servo and buzzer. The "
         "**backend layer** is a Python FastAPI server on a laptop that receives data over Wi-Fi, stores it in "
-        "SQLite and serves it to browsers. The **presentation layer** is a browser-based dashboard served by the backend. Detection runs on the "
+        "SQLite and serves it to browsers. The **presentation layer** is a browser-based dashboard served by the backend, also available "
+        "on an Android phone through a companion app (Section 5.4). Detection runs on the "
         "ESP32 so that the system keeps working — and the buzzer still sounds — if the network drops.")
     r.figure("block", "fig_block.png", "Hardware block diagram", 15.5)
     r.figure("arch", "fig_architecture.png", "System architecture of Arc Guard", 16)
@@ -481,6 +486,7 @@ def chapter3(r: R):
         ("Backend", "Python 3.11, FastAPI, Uvicorn", "Native WebSocket and REST support, async, automatic API docs"),
         ("Database", "SQLite (built-in sqlite3)", "Zero configuration, single file, sufficient for one device"),
         ("Frontend", "HTML5, CSS, JavaScript (no build step), Chart.js 4", "Served directly by FastAPI, works offline on the LAN; radar drawn on an HTML canvas"),
+        ("Mobile app", "Android (Java, WebView), Android 7.0 or later, built with the Android SDK tools", "Reuses the web dashboard unchanged; adds phone vibration and notifications"),
         ("Transport", "WebSocket (RFC 6455) over Wi-Fi 2.4 GHz, JSON payloads", "Bidirectional, low latency, no extra broker"),
     ], widths=(2.8, 6.0, 6.7), caption="Software stack")
     r.h2("3.4 Ultrasonic Ranging Principle")
@@ -543,7 +549,7 @@ def chapter3(r: R):
         ("Scan range / step / settle", "0–180° / 5° / 40 ms", "Servo sweep settings"),
     ], widths=(4.0, 3.5, 8.0), caption="Default detection parameters (all adjustable from the dashboard)")
     r.p("These defaults are starting values; they will be tuned against the false-positive rate measured during "
-        "testing (Section 5.4). A rule-based detector was chosen over machine learning because it is transparent, "
+        "testing (Section 5.5). A rule-based detector was chosen over machine learning because it is transparent, "
         "needs no training data and can be tuned live; a learned model is listed as future work.")
     r.h2("3.7 Communication Flow")
     r.p("The ESP32 connects to the backend’s /ws/device WebSocket and sends a hello message with its firmware "
@@ -686,7 +692,33 @@ def chapter5(r: R):
         "until it is acknowledged.")
     r.p("[Insert dashboard screenshots here after integration testing — overview, radar view, event log, settings.]",
         11, italic=True, align="center", color="C00000")
-    r.h2("5.4 Test Plan and Results")
+    r.h2("5.4 Android Mobile App")
+    r.p("To let the room be watched from a phone, a small Android app (package com.arcguard.app, Android 7.0 or "
+        "later) was written in Java. Rather than re-implementing the dashboard, the app displays the backend's web "
+        "dashboard full-screen in an Android WebView [18], so the phone always shows the same live data, map, charts, "
+        "event log and settings as the laptop, and any dashboard change appears in the app without rebuilding it. The "
+        "app adds the parts a browser tab cannot provide well:")
+    r.bullets([
+        "**Event alerts:** the dashboard page passes each new event to the app through a JavaScript interface; the app "
+        "vibrates (a longer pattern for movement than for an anomaly) and, when it is in the background, posts an "
+        "Android notification that opens the Events tab when tapped.",
+        "**Connect screen:** the backend address is entered once and stored; a Test button checks /api/status before "
+        "connecting. Options switch the alerts on or off and keep the screen awake. It can be reopened from an “App” "
+        "button that the dashboard shows only inside the app.",
+        "**Connection handling:** if the backend cannot be reached, a “Not connected” screen is shown and the app "
+        "retries every 5 s; CSV exports from the event log are saved to the phone's Downloads folder.",
+    ])
+    r.p("The phone reaches the backend in one of two ways. Over **Wi-Fi**, it uses the laptop's local IP address "
+        "(http://<laptop-ip>:8000). Over a **USB cable**, the command adb reverse tcp:8000 tcp:8000 forwards the "
+        "phone's port 8000 to the laptop, so the app uses http://localhost:8000; this works even without a shared "
+        "Wi-Fi network. The app is built and installed by a script that calls the Android SDK tools directly (aapt2, "
+        "javac, d8, apksigner), so no Gradle setup or internet access is needed. Fig 5.2 shows the connect screen and "
+        "the top of the dashboard inside the app, captured on an Android 13 phone with the ESP32 not connected.")
+    r.figure("app", "fig_android_app.png",
+             "Android app: connect screen (left) and dashboard (right), ESP32 not connected", 15.5, ASSETS)
+    r.p("Alerts depend on the app staying open: Android may stop an app that has been in the background for a long "
+        "time, so the phone is a convenience display and the buzzer on the ESP32 remains the primary local alarm.")
+    r.h2("5.5 Test Plan and Results")
     r.p("The following tests will be run on the physical hardware. The **Observed** column is to be completed during "
         "testing with measured values and screenshots; it is intentionally left blank here so that no result is "
         "reported before it has been measured.")
@@ -699,10 +731,11 @@ def chapter5(r: R):
         ("6", "Object removed", "Calibrate with a box present, then remove it (T6)", "OBJECT_DISAPPEARED at that angle", ""),
         ("7", "Sensor fault", "Unplug Sensor 2 ECHO wire", "S2 status FAULT, SENSOR_FAULT event; S1 and S3 keep working", ""),
         ("8", "Wi-Fi loss", "Turn the hotspot off for 30 s, then on", "Device Offline after ~6 s; buzzer still works; reconnects automatically", ""),
+        ("9", "Phone alert", "Android app in the background; walk across a sensor zone", "Phone vibrates and shows a movement notification; tapping it opens the Events tab", ""),
     ], widths=(0.7, 2.6, 3.8, 5.2, 3.2), size=9.5, caption="Hardware test plan")
     r.p("For each test, false positives will be counted over a fixed period of an empty room, and detection delay "
         "will be measured from the moment the object is placed to the event appearing on the dashboard.")
-    r.h2("5.5 Discussion")
+    r.h2("5.6 Discussion")
     r.p("The design choices target the main weaknesses identified in Chapter 2. Sequential triggering removes "
         "crosstalk between the three sensors. Robust per-angle baselines let noisy directions (corners, angled "
         "furniture) have higher thresholds without making quiet directions less sensitive. Persistence-based "
@@ -722,7 +755,7 @@ def chapter6(r: R):
         "sensor provide coverage and direction; robust baselines and a confirmation state machine aim to keep false "
         "alarms low; and a WebSocket-based backend and dashboard give live and historical visibility with settings "
         "that genuinely reach the device. The final evaluation of detection accuracy and false-positive rate will "
-        "be recorded from the tests in Section 5.4.")
+        "be recorded from the tests in Section 5.5.")
     r.p("Possible enhancements, which do not change the core design:")
     r.bullets([
         "**Occupancy-grid mapping:** accumulate sweeps into a 2-D grid [2] for a richer room map.",
@@ -730,7 +763,7 @@ def chapter6(r: R):
         "**Focus scanning:** after a change, rescan a narrow sector more densely before resuming the full sweep.",
         "**Learned classifier:** once enough labelled event data has been recorded, compare a small TinyML model against the rule-based detector and adopt it only if it measurably improves accuracy.",
         "**Multi-node deployment:** several Arc Guard nodes reporting to one backend to cover larger floors.",
-        "**Notifications:** optional e-mail or messaging alerts from the backend.",
+        "**Push notifications:** alerts sent from the backend (for example through Firebase Cloud Messaging) so the phone is alerted even when the Android app is closed, plus optional e-mail or messaging alerts.",
     ])
     r.p("Sustainable Development Goals (SDGs)", 14, True, align="left", space_after=6, keep=True)
     r.p("The project relates to the United Nations Sustainable Development Goals [17] as follows:")
@@ -760,6 +793,7 @@ REFERENCES = [
     "S. Ramírez, “FastAPI documentation.” [Online]. Available: https://fastapi.tiangolo.com",
     "SQLite Consortium, “SQLite documentation.” [Online]. Available: https://www.sqlite.org/docs.html",
     "United Nations, “Transforming our world: the 2030 Agenda for Sustainable Development,” A/RES/70/1, 2015.",
+    "Google, “WebView,” Android Developers documentation. [Online]. Available: https://developer.android.com/reference/android/webkit/WebView",
 ]
 
 
