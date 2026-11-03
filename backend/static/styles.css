@@ -152,6 +152,11 @@ select, input[type=date], input[type=number] { background: var(--bg); color: var
   main { padding: 12px 16px 30px; }
   .topbar { padding: 8px 16px; gap: 10px; }
   .sensor dl { grid-template-columns: repeat(2, 1fr); }
+  .topbar { flex-wrap: wrap; }
+  .tabs { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .tabs button { flex: 0 0 auto; padding: 8px 12px; }
+  .top-status { flex-wrap: wrap; margin-left: auto; }
+  .toasts { left: 16px; right: 16px; max-width: none; }
 }
 
 .sensor canvas.gauge { width: 100%; height: 74px; display: block; margin-top: 10px; }
@@ -166,3 +171,4 @@ input[type=text] { background: var(--bg); color: var(--text); border: 1px solid 
   background: #2a220c; border: 1px solid #6b5413; border-radius: var(--radius); padding: 12px 16px; margin-bottom: 12px; }
 .notice-card b { color: var(--warn); }
 .notice-card .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-btn { font: inherit; cursor: pointer; }

@@ -10,3 +10,5 @@ __pycache__/
 *.pyc
 # graphify output
 graphify-out/
+# Android build output
+android/build/

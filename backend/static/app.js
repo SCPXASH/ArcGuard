@@ -744,6 +744,8 @@ function onEvent(e) {
   toast(`${e.category === "MOVEMENT" ? "Possible movement" : "Anomaly"} · ${SENSOR_NAME[e.sensor_id]}`,
     `${KIND_LABEL[e.kind] || e.kind}${where}${e.distance_cm !== null && e.distance_cm !== undefined ? ` · ${nf(e.distance_cm)} cm` : ""}`, e.category);
   if (S.tab !== "events") { S.newEvents++; renderBadge(); } else if (S.evOffset === 0) loadEvents();
+  // Android app: native notification + vibration (no-op in a normal browser)
+  try { window.ArcGuardNative?.onEvent(JSON.stringify(e)); } catch { /* bridge unavailable */ }
 }
 
 const PAGE = 50;
@@ -968,3 +970,13 @@ seedLive();
 loadSettings();
 if (location.hash.length > 1) showTab(location.hash.slice(1));
 window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+
+// Android app: header button to change the backend address / app options
+if (window.ArcGuardNative) {
+  const b = document.createElement("button");
+  b.className = "pill dim app-btn";
+  b.textContent = "⚙ App";
+  b.title = "Arc Guard app: backend address, notifications";
+  b.addEventListener("click", () => window.ArcGuardNative.openSettings());
+  document.querySelector(".top-status")?.prepend(b);
+}

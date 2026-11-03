@@ -57,6 +57,11 @@ IOTProject/
 │   ├── simulator.py              scripted fake device for development (data marked SIMULATED)
 │   ├── static/sim3d.html, sim3d.js   3D room simulator at /sim (Three.js, data marked SIMULATED)
 │   └── tests/                    smoke_test.py (end-to-end API), relocation_test.py ("sensor moved?" notice)
+├── android/                      Android app (WebView around the dashboard + event notifications)
+│   ├── build.ps1                 builds build\ArcGuard.apk with the Android SDK (no Gradle); -Install puts it on the phone
+│   ├── AndroidManifest.xml
+│   ├── res/                      icon, theme, network config
+│   └── src/com/arcguard/app/MainActivity.java
 └── report/                       project report (.docx/.pdf) and its generator
 ```
 
@@ -133,7 +138,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 - Dashboard on the laptop: **http://localhost:8000**
-- From a phone on the same network: **http://<laptop-ip>:8000**
+- From a phone on the same network: **http://<laptop-ip>:8000** — or use the Android app (section 6)
 - API documentation: **http://localhost:8000/docs**
 
 The first time, Windows Firewall asks whether Python may accept connections — allow it on **private networks** (the ESP32 cannot connect otherwise).
@@ -178,6 +183,40 @@ Ultrasonic sensors measure distance only, so the system cannot work out on its o
 # with backend + simulator running, in C:\IOTProject\backend
 python tests\smoke_test.py
 ```
+
+---
+
+## 6. Android app (optional)
+
+A small Android app (`android/`, package `com.arcguard.app`, Android 7.0+) shows the same live dashboard full-screen on the phone and adds:
+
+- **Vibration + notifications** for *possible movement* and *anomaly* events (a notification only while the app is in the background; tapping it opens the Events tab). Background alerts work only while Android keeps the app running — it is not a guaranteed alarm.
+- A **connect screen** (backend address, *Test* button, notification and keep-screen-on options), reachable later from the **⚙ App** button in the dashboard header (shown only inside the app).
+- A "Not connected" screen that **retries every 5 s**, CSV downloads to *Downloads*, and the Back button works inside the dashboard.
+
+The dashboard itself is not duplicated: the app loads it from the backend, so dashboard changes appear in the app without rebuilding it.
+
+### Build and install
+
+Needs Android Studio (for its SDK in `%LOCALAPPDATA%\Android\Sdk` and its bundled JDK) — no Gradle and no internet. On the phone: enable *Developer options → USB debugging*, plug it in and accept the "Allow USB debugging" prompt.
+
+```powershell
+# in C:\IOTProjectndroid  — builds build\ArcGuard.apk; -Install also installs it, runs adb reverse and opens the app
+powershell -ExecutionPolicy Bypass -File build.ps1 -Install
+```
+
+Without `-Install` it only builds `build\ArcGuard.apk`, which can be copied to the phone and installed by hand (allow "install unknown apps").
+
+### Connect
+
+Start the backend first (section 5), then in the app's connect screen:
+
+| Connection | Address in the app | Notes |
+|---|---|---|
+| **USB cable** | `http://localhost:8000` | Run `adb reverse tcp:8000 tcp:8000` (in `%LOCALAPPDATA%\Android\Sdk\platform-tools`) again after every re-plug. `build.ps1 -Install` does it for you. |
+| **Wi-Fi** | `http://<laptop-ip>:8000` | Phone on the same network as the laptop; laptop IPv4 from `ipconfig` (e.g. `192.168.1.5`). Allow Python through Windows Firewall on private networks. |
+
+The *Live room ↗* and *3D sim ↗* views open inside the app as well (Back returns to the dashboard).
 
 ---
 
