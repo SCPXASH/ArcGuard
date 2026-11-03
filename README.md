@@ -218,6 +218,8 @@ Start the backend first (section 5), then in the app's connect screen:
 
 The *Live room ↗* and *3D sim ↗* views open inside the app as well (Back returns to the dashboard).
 
+**Demo without hardware:** start the backend and `python simulator.py` (see *Developing without hardware*); the app then shows a live, online dashboard with the **SIMULATED DATA** banner. The report's app screenshots (Figs 5.2–5.3, `report/assets/fig_android_app*.png`) were taken this way. At phone width the dashboard header wraps, the tabs scroll sideways, the room map shows fewer overlapping labels, and the event log hides its ID and Date columns so Category and Type stay visible.
+
 ---
 
 ## How detection works (short version)

@@ -375,7 +375,8 @@ def list_of_figures(r: R):
             ("3.3", "Sequential measurement schedule"), ("3.4", "Detection logic state machine"),
             ("3.5", "Communication flow"), ("4.1", "Breadboard wiring diagram"),
             ("4.2", "Demo placement (top view)"), ("5.1", "Firmware flow"),
-            ("5.2", "Android app: connect screen and dashboard")]
+            ("5.2", "Android app: connect screen, overview and room map"),
+            ("5.3", "Android app: analytics, event log and settings")]
     r.table(["Figure", "Title"], figs, widths=(3, 12.5), size=11)
     tabs = [("3.1", "Hardware components"), ("3.2", "Software stack"), ("3.3", "Default detection parameters"),
             ("4.1", "GPIO pin mapping"), ("4.2", "Power connections"), ("5.1", "Backend API endpoints"),
@@ -712,10 +713,15 @@ def chapter5(r: R):
         "(http://<laptop-ip>:8000). Over a **USB cable**, the command adb reverse tcp:8000 tcp:8000 forwards the "
         "phone's port 8000 to the laptop, so the app uses http://localhost:8000; this works even without a shared "
         "Wi-Fi network. The app is built and installed by a script that calls the Android SDK tools directly (aapt2, "
-        "javac, d8, apksigner), so no Gradle setup or internet access is needed. Fig 5.2 shows the connect screen and "
-        "the top of the dashboard inside the app, captured on an Android 13 phone with the ESP32 not connected.")
+        "javac, d8, apksigner), so no Gradle setup or internet access is needed. Figs 5.2 and 5.3 are screenshots "
+        "of the app on an Android 13 phone connected over USB. Because the hardware had not yet been tested when "
+        "they were taken, the backend was fed by the project's device simulator (simulator.py), which connects "
+        "exactly like the ESP32; the dashboard therefore shows its SIMULATED DATA banner and SIM tags. The screenshots "
+        "show the user interface working end to end; the readings and events in them are not hardware results.")
     r.figure("app", "fig_android_app.png",
-             "Android app: connect screen (left) and dashboard (right), ESP32 not connected", 15.5, ASSETS)
+             "Android app: connect screen, dashboard overview and room map (simulated data)", 15.5, ASSETS)
+    r.figure("app2", "fig_android_app2.png",
+             "Android app: analytics, event log and device settings (simulated data)", 15.5, ASSETS)
     r.p("Alerts depend on the app staying open: Android may stop an app that has been in the background for a long "
         "time, so the phone is a convenience display and the buzzer on the ESP32 remains the primary local alarm.")
     r.h2("5.5 Test Plan and Results")

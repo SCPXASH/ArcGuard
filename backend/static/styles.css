@@ -157,6 +157,9 @@ select, input[type=date], input[type=number] { background: var(--bg); color: var
   .tabs button { flex: 0 0 auto; padding: 8px 12px; }
   .top-status { flex-wrap: wrap; margin-left: auto; }
   .toasts { left: 16px; right: 16px; max-width: none; }
+  /* event log on phones: drop ID and Date (the date filter is above) so Category and Type stay in view */
+  table.events.full th:nth-child(-n+2), table.events.full td:nth-child(-n+2):not([colspan]) { display: none; }
+  table.events td, table.events th { padding: 8px 6px; }
 }
 
 .sensor canvas.gauge { width: 100%; height: 74px; display: block; margin-top: 10px; }

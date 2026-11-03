@@ -394,15 +394,22 @@ function drawRadar() {
   // grid
   ctx.lineWidth = 1;
   ctx.font = "11px Segoe UI, Arial";
+  // narrow screens (phones): label fewer rings and keep rear angle labels clear of the sensor labels
+  const narrow = w < 560;
+  const ringStep = (R / 4) < ctx.measureText("300 cm").width + 8 ? 2 : 1;
   for (let i = 1; i <= 4; i++) {
     ctx.strokeStyle = i === 4 ? "#2b4a66" : "#1c2b3d";
     ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, 2 * Math.PI); ctx.stroke();
+    if (i % ringStep) continue;
     ctx.fillStyle = "#5b6b80"; ctx.textAlign = "left";
     ctx.fillText(`${Math.round((rmax * i) / 4)} cm`, cx + (R * i) / 4 + 3, cy + 13);
   }
+  const sensorDirs = [1, 2].map((id) => S.layout?.[`s${id}_angle`]).filter((v) => typeof v === "number");
+  const angDist = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
   for (let a = 0; a < 360; a += 30) {
     const [x, y] = pos(a, rmax);
     ctx.strokeStyle = "#1a283a"; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke();
+    if (narrow && a > 180 && sensorDirs.some((d) => angDist(a, d) <= 35)) continue;
     const [lx, ly] = pos(a, rmax * 1.075);
     ctx.fillStyle = a <= 180 ? "#7b8ba0" : "#56677d"; ctx.textAlign = "center"; ctx.fillText(`${a}°`, lx, ly + 4);
   }
