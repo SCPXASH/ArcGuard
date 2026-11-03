@@ -62,6 +62,10 @@ IOTProject/
 │   ├── AndroidManifest.xml
 │   ├── res/                      icon, theme, network config
 │   └── src/com/arcguard/app/MainActivity.java
+├── presentation/                 project presentation (16 slides) and its generator
+│   ├── ArcGuard_Presentation.pptx
+│   ├── build_ppt.py              python-pptx script that builds the .pptx
+│   └── assets/                   college header and app screenshot used on the slides
 └── report/                       project report (.docx/.pdf) and its generator
 ```
 
@@ -201,7 +205,7 @@ The dashboard itself is not duplicated: the app loads it from the backend, so da
 Needs Android Studio (for its SDK in `%LOCALAPPDATA%\Android\Sdk` and its bundled JDK) — no Gradle and no internet. On the phone: enable *Developer options → USB debugging*, plug it in and accept the "Allow USB debugging" prompt.
 
 ```powershell
-# in C:\IOTProjectndroid  — builds build\ArcGuard.apk; -Install also installs it, runs adb reverse and opens the app
+# in C:\IOTProject\android  — builds build\ArcGuard.apk; -Install also installs it, runs adb reverse and opens the app
 powershell -ExecutionPolicy Bypass -File build.ps1 -Install
 ```
 
@@ -219,6 +223,20 @@ Start the backend first (section 5), then in the app's connect screen:
 The *Live room ↗* and *3D sim ↗* views open inside the app as well (Back returns to the dashboard).
 
 **Demo without hardware:** start the backend and `python simulator.py` (see *Developing without hardware*); the app then shows a live, online dashboard with the **SIMULATED DATA** banner. The report's app screenshots (Figs 5.2–5.3, `report/assets/fig_android_app*.png`) were taken this way. At phone width the dashboard header wraps, the tabs scroll sideways, the room map shows fewer overlapping labels, and the event log hides its ID and Date columns so Category and Type stay visible.
+
+---
+
+## 7. Report and presentation
+
+- **Report:** `report/ArcGuard_Project_Report.docx` and `.pdf`. Rebuild after changes with `python report\build_report.py` (needs `python-docx`, `pypdf` and Microsoft Word for the PDF; diagrams come from `python docs\diagrams\make_diagrams.py`).
+- **Presentation:** `presentation/ArcGuard_Presentation.pptx`, 16 slides in the format of the original Canva deck (same slide titles), with content matching the current build: hardware and pin map, architecture diagram, detection logic, backend and the Android app.
+
+```powershell
+# in C:\IOTProject — needs python-pptx (pip install python-pptx)
+python presentation\build_ppt.py
+```
+
+The slides use **Century Gothic** because the original's Poppins font is not installed on this laptop; if the presenting computer has Poppins, set `FONT = "Poppins"` at the top of `build_ppt.py` and rebuild. The app screenshot on the *Software Components* slide shows simulated data and is captioned as such.
 
 ---
 
