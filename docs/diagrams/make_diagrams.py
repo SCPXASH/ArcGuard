@@ -280,15 +280,15 @@ def block():
 # 3. System architecture
 # --------------------------------------------------------------------------
 def architecture():
-    W, H = 1200, 840
+    W, H = 1200, 940
     o = [text(W / 2, 36, "Arc Guard — System Architecture", 22, "bold", "#0d47a1", "middle")]
     layers = [
         (70, "SENSING LAYER", "#fff8e1", "#f9a825"),
         (230, "EDGE LAYER — ESP32 FIRMWARE (Arduino / C++)", "#ede7f6", "#5e35b1"),
         (450, "NETWORK + BACKEND LAYER (Python FastAPI on laptop)", "#e8f5e9", "#2e7d32"),
-        (640, "PRESENTATION LAYER (web dashboard: HTML/JS + Chart.js, any browser)", "#e3f2fd", "#1565c0"),
+        (640, "PRESENTATION LAYER (web dashboard: HTML/JS + Chart.js)", "#e3f2fd", "#1565c0"),
     ]
-    hts = [130, 190, 160, 150]
+    hts = [130, 190, 160, 250]
     for (y, t, f, s), h in zip(layers, hts):
         o.append(f'<rect x="20" y="{y}" width="{W - 40}" height="{h}" rx="12" fill="{f}" stroke="{s}" stroke-width="1.5"/>')
         o.append(text(36, y + 22, t, 13.5, "bold", s))
@@ -341,7 +341,21 @@ def architecture():
     o.append(label(900, 635, "live updates (WebSocket)", 11.5, "#1565c0"))
     o.append(arrow([(925, 680), (925, 660), (825, 660), (825, 585)], dash="5 4"))
     o.append(label(870, 672, "REST (settings, history)", 11, "#37474f"))
-    o.append(text(W / 2, 822, "Settings flow: Dashboard → REST → backend stores → pushed to ESP32 → ESP32 applies, saves to NVS, ACKs → dashboard shows “Applied”.",
+    # clients that load the dashboard pages above
+    o.append(box(50, 795, 425, 74, "Laptop / any web browser", ["same Wi-Fi network, or the laptop itself"], fill="#fff", stroke="#1565c0"))
+    o.append(box(500, 795, 650, 74, "", fill="#fff", stroke="#1565c0"))
+    # phone icon
+    o.append('<rect x="518" y="803" width="34" height="58" rx="6" fill="#0b1017" stroke="#1565c0" stroke-width="1.6"/>'
+             '<rect x="522" y="811" width="26" height="40" rx="2" fill="#3fb6ff" opacity=".85"/>'
+             '<circle cx="535" cy="856" r="2" fill="#90a4ae"/>')
+    o.append(text(851, 817, "Android phone — Arc Guard app (WebView)", 15, "bold", "#102027", "middle"))
+    o.append(text(851, 837, "shows the dashboard • vibration + notification on movement / anomaly events", 12.5, fill="#37474f", anchor="middle"))
+    o.append(text(851, 855, "USB cable (adb reverse tcp:8000) or Wi-Fi", 12.5, fill="#37474f", anchor="middle"))
+    o.append(arrow([(262, 795), (262, 756)], color="#1565c0", marker="arrB"))
+    o.append(arrow([(825, 795), (825, 756)], color="#1565c0", marker="arrB"))
+    o.append(label(272, 781, "loads the dashboard (http://<laptop>:8000)", 11.5, "#1565c0", anchor="start"))
+    o.append(label(835, 781, "loads the same dashboard + alerts the user", 11.5, "#1565c0", anchor="start"))
+    o.append(text(W / 2, 916, "Settings flow: Dashboard → REST → backend stores → pushed to ESP32 → ESP32 applies, saves to NVS, ACKs → dashboard shows “Applied”.",
                   13, fill="#455a64", anchor="middle"))
     return svg_doc(W, H, "".join(o))
 

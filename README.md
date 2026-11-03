@@ -19,7 +19,7 @@ Sensors + servo ──> ESP32 firmware (scheduling, filtering, baseline, detecti
                FastAPI backend ──> SQLite (backend/data/arcguard.db)
                          │  WebSocket (/ws/dashboard) + REST (/api/...)
                          ▼
-               Web dashboard (any browser on the same network)
+               Web dashboard (any browser on the same network, or the Android app on a phone)
 ```
 
 ---
